@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: scaleon-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: bash build.sh
+    startCommand: gunicorn app.main:app -w 2 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+    disk:
+      name: scaleon-data
+      mountPath: /opt/render/project/src
+      sizeGB: 1
