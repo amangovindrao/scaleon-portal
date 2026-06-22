@@ -138,19 +138,21 @@ export default function TestExam() {
       const s = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' }, audio: false });
       streamRef.current = s;
       setCamReady(true);
-      setTimeout(() => capturePhoto('test_start'), 2000);
+      setTimeout(() => capturePhoto('test_start'), 3000);
       startFrameCapture();
-    } catch {
+    } catch (err) {
+      console.error('Camera error:', err);
       setCamReady(false);
     }
   }
 
-  // Re-attach stream when video ref becomes available
+  // Attach stream to video element whenever ref or stream changes
   useEffect(() => {
-    if (videoRef.current && streamRef.current) {
+    if (videoRef.current && streamRef.current && camReady) {
       videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(() => {});
     }
-  }, [camReady]);
+  });
 
   async function loadSession() {
     try {
@@ -390,8 +392,9 @@ export default function TestExam() {
           <div className="sidebar-section">
             <div className="sidebar-section-title"><Camera size={12} /> Camera</div>
             <div className="webcam-preview">
-              <video ref={videoRef} autoPlay muted playsInline style={{ width: '100%', display: 'block', borderRadius: 8 }} />
+              <video ref={videoRef} autoPlay muted playsInline style={{ width: '100%', display: 'block', borderRadius: 8, transform: 'scaleX(-1)' }} />
               {camReady && <div className="webcam-status"><div className="cam-dot active" />Live</div>}
+              {!camReady && <div className="webcam-status" style={{ color: '#f87171' }}>Camera not available</div>}
             </div>
           </div>
 
