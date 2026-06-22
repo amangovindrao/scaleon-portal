@@ -156,6 +156,15 @@ export default function AdminDashboard() {
             <div className="page-header">
               <h1>Candidates</h1>
               <p>Add and manage internship applicants</p>
+              <button className="btn btn-outline btn-sm mt-8" onClick={async () => {
+                const token = localStorage.getItem('token');
+                const res = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/admin/export/csv', {
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = 'scaleon_candidates.csv'; a.click();
+              }}>⬇ Download All Data (CSV)</button>
             </div>
             <div className="page-body">
               <div className="stats-row">

@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List
+import csv
+import io
 
 from .. import models, schemas, auth
 from ..database import get_db
@@ -211,4 +214,45 @@ def get_camera_frames(
         .filter(models.CameraFrame.session_id == session_id)
         .order_by(models.CameraFrame.captured_at)
         .all()
+    )
+
+
+# ---------- CSV Export ----------
+
+@router.get("/export/csv")
+def export_candidates_csv(
+    db: Session = Depends(get_db),
+    _admin=Depends(auth.get_current_admin),
+):
+    """Download all candidate data as CSV."""
+    candidates = db.query(models.Candidate).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Name", "Email", "Role", "Status", "Score", "Max Score", "Warnings", "Started At", "Submitted At"])
+
+    for c in candidates:
+        session = (
+            db.query(models.TestSession)
+            .filter(models.TestSession.candidate_id == c.id)
+            .order_by(models.TestSession.id.desc())
+            .first()
+        )
+        writer.writerow([
+            c.name,
+            c.email,
+            c.role.name if c.role else "",
+            session.status.value if session else "not_started",
+            session.total_score if session else 0,
+            session.max_score if session else 0,
+            session.warning_count if session else 0,
+            session.started_at.isoformat() if session and session.started_at else "",
+            session.submitted_at.isoformat() if session and session.submitted_at else "",
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=scaleon_candidates.csv"},
     )

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
+import random
 
 from .. import models, schemas, auth
 from ..database import get_db
@@ -80,6 +81,10 @@ def get_section_questions(
         .order_by(models.Question.order_index)
         .all()
     )
+    # Shuffle questions uniquely per candidate (deterministic based on candidate ID)
+    rng = random.Random(candidate.id)
+    rng.shuffle(questions)
+
     return schemas.SectionPayload(
         section=section,
         questions=questions,

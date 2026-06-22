@@ -29,6 +29,12 @@ export default function TestReady() {
   }
 
   async function startTest() {
+    // Check deadline
+    const DEADLINE = new Date('2026-06-22T17:20:00+05:30').getTime();
+    if (Date.now() >= DEADLINE) {
+      setError('The test window has closed (5:20 PM deadline passed). You can no longer start the test.');
+      return;
+    }
     if (!camOk) { setError('Please allow camera access first.'); return; }
     setStarting(true);
     try {

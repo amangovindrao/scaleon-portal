@@ -83,8 +83,40 @@ export default function TestExam() {
   const countdownRef = useRef(null);
   const warningLockRef = useRef(false);
 
+  // Hard deadline: 5:20 PM IST, June 22, 2026
+  const DEADLINE = new Date('2026-06-22T17:20:00+05:30').getTime();
+  const ALERT_5MIN = new Date('2026-06-22T17:15:00+05:30').getTime();
+  const ALERT_20MIN = new Date('2026-06-22T17:00:00+05:30').getTime();
+  const [deadlineAlert, setDeadlineAlert] = useState('');
+
+  // Deadline checker
+  useEffect(() => {
+    const deadlineInterval = setInterval(() => {
+      const now = Date.now();
+      if (now >= DEADLINE) {
+        clearInterval(deadlineInterval);
+        setDeadlineAlert('⏰ Time is up! Test is being submitted.');
+        playAlertBeep();
+        setTimeout(() => handleFinish(), 2000);
+      } else if (now >= ALERT_5MIN && !deadlineAlert.includes('5 minutes')) {
+        setDeadlineAlert('⚠️ Only 5 minutes remaining! At 5:20 PM your test will be auto-submitted.');
+        playAlertBeep();
+      } else if (now >= ALERT_20MIN && !deadlineAlert.includes('5:20')) {
+        const remaining = Math.ceil((DEADLINE - now) / 60000);
+        setDeadlineAlert(`⏰ You have ${remaining} minutes remaining. Test closes at 5:20 PM.`);
+        playAlertBeep();
+      }
+    }, 10000); // check every 10 seconds
+    return () => clearInterval(deadlineInterval);
+  }, [deadlineAlert]);
+
   // Init
   useEffect(() => {
+    // Check if deadline has passed
+    if (Date.now() >= DEADLINE) {
+      navigate('/test/result');
+      return;
+    }
     enterFullscreen();
     initCam();
     loadSession();
@@ -449,6 +481,16 @@ export default function TestExam() {
           <div className="gaze-alert-box">
             <Volume2 size={20} />
             <span>{gazeAlert}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Deadline alert */}
+      {deadlineAlert && (
+        <div className="gaze-alert-overlay" style={{ top: gazeAlert ? 120 : 70 }}>
+          <div className="gaze-alert-box" style={{ background: 'rgba(245, 158, 11, 0.95)', boxShadow: '0 8px 32px rgba(245, 158, 11, 0.4)' }}>
+            <Clock size={20} />
+            <span>{deadlineAlert}</span>
           </div>
         </div>
       )}
