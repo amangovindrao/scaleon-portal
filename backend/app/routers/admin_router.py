@@ -257,3 +257,48 @@ def export_candidates_csv(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=scaleon_candidates.csv"},
     )
+
+
+# ---------- Download Photos ----------
+
+@router.get("/photos")
+def list_photo_folders(
+    _admin=Depends(auth.get_current_admin),
+):
+    """List all candidate photo folders."""
+    import os
+    upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "frames")
+    if not os.path.exists(upload_dir):
+        return {"folders": []}
+    folders = []
+    for name in os.listdir(upload_dir):
+        path = os.path.join(upload_dir, name)
+        if os.path.isdir(path):
+            count = len([f for f in os.listdir(path) if f.endswith('.jpg')])
+            folders.append({"name": name, "photo_count": count})
+    return {"folders": folders}
+
+
+@router.get("/photos/download")
+def download_all_photos(
+    _admin=Depends(auth.get_current_admin),
+):
+    """Download all candidate photos as a zip file."""
+    import os, zipfile
+    upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "frames")
+    if not os.path.exists(upload_dir):
+        raise HTTPException(status_code=404, detail="No photos found")
+
+    zip_path = "/tmp/scaleon_photos.zip"
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for root, dirs, files in os.walk(upload_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, upload_dir)
+                zf.write(file_path, arcname)
+
+    return StreamingResponse(
+        open(zip_path, "rb"),
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=scaleon_photos.zip"},
+    )
