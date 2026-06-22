@@ -135,20 +135,22 @@ export default function TestExam() {
 
   async function initCam() {
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240, facingMode: 'user' }, audio: false });
+      const s = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' }, audio: false });
       streamRef.current = s;
-      if (videoRef.current) {
-        videoRef.current.srcObject = s;
-        videoRef.current.play().catch(() => {});
-      }
       setCamReady(true);
-      // Take start photo after 2 sec (camera warm up)
       setTimeout(() => capturePhoto('test_start'), 2000);
       startFrameCapture();
     } catch {
       setCamReady(false);
     }
   }
+
+  // Re-attach stream when video ref becomes available
+  useEffect(() => {
+    if (videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [camReady]);
 
   async function loadSession() {
     try {
@@ -336,14 +338,16 @@ export default function TestExam() {
       <div className="exam-body-split">
         {/* LEFT 80% */}
         <main className="exam-left">
-          <div className="cooldown-bar-wrap">
-            <div className="cooldown-bar">
-              <div className={`cooldown-fill ${canAnswer ? 'ready' : ''}`} style={{ width: `${((COOLDOWN_SECONDS - cooldown) / COOLDOWN_SECONDS) * 100}%` }}></div>
+          {!canAnswer && (
+            <div className="cooldown-bar-wrap">
+              <div className="cooldown-bar">
+                <div className={`cooldown-fill`} style={{ width: `${((COOLDOWN_SECONDS - cooldown) / COOLDOWN_SECONDS) * 100}%` }}></div>
+              </div>
+              <div className="cooldown-text">
+                <span>Read the question… <strong className="cooldown-countdown">{cooldown}s</strong></span>
+              </div>
             </div>
-            <div className="cooldown-text">
-              {canAnswer ? <span className="text-success">✓ You can answer now</span> : <span>Read the question… <strong className="cooldown-countdown">{cooldown}s</strong></span>}
-            </div>
-          </div>
+          )}
 
           {currentQ && (
             <div className="question-display glass-card">
