@@ -126,8 +126,8 @@ export default function AdminDashboard() {
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-logo">
-          <div className="wordmark">theScaleOn</div>
-          <div className="tagline">Hiring Portal</div>
+          <img src="/logo.svg" alt="ScaleOn" style={{ height: 28 }} />
+          <div className="tagline">Admin Panel</div>
         </div>
         <nav>
           {[

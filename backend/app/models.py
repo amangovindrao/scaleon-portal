@@ -31,9 +31,8 @@ from .database import Base
 
 
 class RoleSlug(str, enum.Enum):
-    ai_agent_developer = "ai_agent_developer"
-    project_management = "project_management"
-    social_media_marketing = "social_media_marketing"
+    technical = "technical"
+    marketing = "marketing"
 
 
 class Section(str, enum.Enum):

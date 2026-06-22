@@ -36,28 +36,10 @@ async def upload_frame(
     db: Session = Depends(get_db),
     candidate: models.Candidate = Depends(auth.get_current_candidate),
 ):
-    session = _get_active_session(db, candidate)
-
-    raw_bytes = await file.read()
-
-    # Server-side re-compression safety net: re-encode as JPEG, cap dimensions,
-    # so storage stays small even if a client sends something larger than expected.
-    try:
-        image = Image.open(io.BytesIO(raw_bytes))
-        image = image.convert("RGB")
-        image.thumbnail((320, 240))  # low-res is plenty for a proctoring snapshot
-        session_dir = os.path.join(UPLOAD_DIR, str(session.id))
-        os.makedirs(session_dir, exist_ok=True)
-        filename = f"{uuid.uuid4().hex}.jpg"
-        file_path = os.path.join(session_dir, filename)
-        image.save(file_path, format="JPEG", quality=60)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid image data")
-
-    frame = models.CameraFrame(session_id=session.id, file_path=file_path)
-    db.add(frame)
-    db.commit()
-    return {"detail": "Frame stored", "frame_id": frame.id}
+    """Accept frame upload but don't store on disk (saves resources on free hosting).
+    Just acknowledge receipt — proctoring is enforced via events/warnings."""
+    _ = await file.read()  # consume the upload
+    return {"detail": "Frame received"}
 
 
 @router.post("/event", response_model=schemas.ProctorEventOut)

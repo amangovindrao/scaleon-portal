@@ -6,7 +6,7 @@ import api from '../api/client';
 const SECTIONS = ['aptitude', 'coding', 'case_study'];
 const SECTION_LABELS = { aptitude: 'Aptitude', coding: 'Coding MCQ', case_study: 'Case Study' };
 const OPTION_LETTERS = ['a', 'b', 'c', 'd'];
-const FRAME_INTERVAL_MS = 5000;
+const FRAME_INTERVAL_MS = 15000; // capture every 15s (lightweight)
 const COOLDOWN_SECONDS = 5;
 
 // Alert beep sound using Web Audio API
@@ -232,38 +232,24 @@ export default function TestExam() {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, 320, 240);
 
-    // Analyze frame for face/gaze detection
-    const centerData = ctx.getImageData(80, 40, 160, 160).data;
+    // Only warn if camera is fully blocked (completely dark/covered)
+    const imageData = ctx.getImageData(0, 0, 320, 240).data;
     let totalBrightness = 0;
-    let leftBrightness = 0;
-    let rightBrightness = 0;
-    const pixelCount = centerData.length / 4;
-    const halfPixels = pixelCount / 2;
-
-    for (let i = 0; i < centerData.length; i += 4) {
-      const brightness = (centerData[i] + centerData[i+1] + centerData[i+2]) / 3;
-      totalBrightness += brightness;
-      const pixelIdx = i / 4;
-      if (pixelIdx < halfPixels) leftBrightness += brightness;
-      else rightBrightness += brightness;
+    const sampleStep = 40; // sample every 40th pixel for performance
+    let sampleCount = 0;
+    for (let i = 0; i < imageData.length; i += sampleStep * 4) {
+      totalBrightness += (imageData[i] + imageData[i+1] + imageData[i+2]) / 3;
+      sampleCount++;
     }
+    const avgBrightness = totalBrightness / sampleCount;
 
-    const avgBrightness = totalBrightness / pixelCount;
-    const leftAvg = leftBrightness / halfPixels;
-    const rightAvg = rightBrightness / halfPixels;
-    const asymmetry = Math.abs(leftAvg - rightAvg);
-
-    // Detect issues and trigger alert with beep
-    if (!gazeAlertCooldown.current) {
-      if (avgBrightness < 15) {
-        triggerGazeAlert('⚠️ Please stay in the camera frame!');
-      } else if (asymmetry > 40) {
-        triggerGazeAlert('👀 Please look straight at the screen!');
-      }
+    // Only show warning if camera is covered/blocked (very dark)
+    if (avgBrightness < 10 && !gazeAlertCooldown.current) {
+      setShowFaceWarning(true);
+      triggerGazeAlert('⚠️ Camera appears blocked. Please stay visible.');
+    } else if (avgBrightness >= 10) {
+      setShowFaceWarning(false);
     }
-
-    // Also check if face is not visible (too dark)
-    setShowFaceWarning(avgBrightness < 15);
 
     canvas.toBlob(async (blob) => {
       if (!blob) return;
@@ -282,7 +268,7 @@ export default function TestExam() {
     setTimeout(() => {
       setGazeAlert('');
       gazeAlertCooldown.current = false;
-    }, 5000);
+    }, 8000); // 8 second cooldown between alerts
   }
 
   // Proctoring: tab-switch / blur detection with beep
