@@ -57,14 +57,29 @@ export default function AdminDashboard() {
 
   async function addCandidate(e) {
     e.preventDefault();
-    try {
-      await api.post('/admin/candidates', { ...newCandidate, role_id: Number(newCandidate.role_id) });
-      setNewCandidate({ name: '', email: '', access_code: '', role_id: '' });
-      flash('Candidate added successfully');
-      fetchAll();
-    } catch (err) {
-      flash(err.response?.data?.detail || 'Failed to add candidate', true);
+    const names = newCandidate.name.split(',').map(n => n.trim()).filter(Boolean);
+    const emails = newCandidate.email.split(',').map(n => n.trim()).filter(Boolean);
+    const prefix = newCandidate.access_code.trim();
+    const roleId = Number(newCandidate.role_id);
+
+    if (names.length !== emails.length) {
+      flash('Number of names and emails must match', true);
+      return;
     }
+
+    let added = 0;
+    for (let i = 0; i < names.length; i++) {
+      const code = `${prefix}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      try {
+        await api.post('/admin/candidates', { name: names[i], email: emails[i], access_code: code, role_id: roleId });
+        added++;
+      } catch (err) {
+        flash(`Failed: ${emails[i]} — ${err.response?.data?.detail || 'Error'}`, true);
+      }
+    }
+    if (added > 0) flash(`${added} candidate(s) added successfully`);
+    setNewCandidate({ name: '', email: '', access_code: '', role_id: '' });
+    fetchAll();
   }
 
   async function deleteCandidate(id) {
@@ -175,22 +190,22 @@ export default function AdminDashboard() {
 
               {/* Add form */}
               <div className="card mb-24">
-                <h3 className="mb-16" style={{ fontSize: '15px' }}>Add New Candidate</h3>
+                <h3 className="mb-16" style={{ fontSize: '15px' }}>Add Candidates</h3>
                 <form onSubmit={addCandidate}>
                   <div className="grid-2">
                     <div className="form-group">
-                      <label className="form-label">Full Name</label>
-                      <input className="input" placeholder="Riya Sharma" value={newCandidate.name}
+                      <label className="form-label">Full Name (comma-separated for bulk)</label>
+                      <input className="input" placeholder="Riya Sharma, Aman Singh, Priya Patel" value={newCandidate.name}
                         onChange={e => setNewCandidate(f => ({ ...f, name: e.target.value }))} required />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Email</label>
-                      <input className="input" type="email" placeholder="riya@college.edu" value={newCandidate.email}
+                      <label className="form-label">Email (comma-separated for bulk)</label>
+                      <input className="input" type="text" placeholder="riya@email.com, aman@email.com" value={newCandidate.email}
                         onChange={e => setNewCandidate(f => ({ ...f, email: e.target.value }))} required />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Access Code</label>
-                      <input className="input" placeholder="e.g. SC-2025-001" value={newCandidate.access_code}
+                      <label className="form-label">Code Prefix (auto-generates unique codes)</label>
+                      <input className="input" placeholder="e.g. SC-2026" value={newCandidate.access_code}
                         onChange={e => setNewCandidate(f => ({ ...f, access_code: e.target.value }))} required />
                     </div>
                     <div className="form-group">
@@ -202,7 +217,8 @@ export default function AdminDashboard() {
                       </select>
                     </div>
                   </div>
-                  <button className="btn btn-primary mt-16" type="submit"><Plus size={15} />Add Candidate</button>
+                  <p className="text-xs text-muted mt-8">For bulk: enter multiple names and emails separated by commas. Each gets a unique access code (prefix + random).</p>
+                  <button className="btn btn-primary mt-16" type="submit"><Plus size={15} />Add Candidate(s)</button>
                 </form>
               </div>
 
@@ -212,18 +228,19 @@ export default function AdminDashboard() {
                   <table>
                     <thead>
                       <tr>
-                        <th>Name</th><th>Email</th><th>Role</th><th>Status</th>
+                        <th>Name</th><th>Email</th><th>Access Code</th><th>Role</th><th>Status</th>
                         <th>Score</th><th>Warnings</th><th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {candidates.length === 0 && (
-                        <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--white-50)', padding: '32px' }}>No candidates yet. Add one above.</td></tr>
+                        <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--white-50)', padding: '32px' }}>No candidates yet. Add one above.</td></tr>
                       )}
                       {candidates.map(c => (
                         <tr key={c.id}>
                           <td className="font-semibold">{c.name}</td>
                           <td className="text-muted text-sm">{c.email}</td>
+                          <td><code style={{ fontSize: 11, background: 'var(--white-08)', padding: '2px 6px', borderRadius: 4 }}>{c.access_code || '—'}</code></td>
                           <td><span className="badge badge-gold">{c.role_name || '—'}</span></td>
                           <td>
                             <span className={`badge ${STATUS_BADGE[c.session_status] || 'badge-neutral'}`}>

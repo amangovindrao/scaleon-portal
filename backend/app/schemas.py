@@ -48,6 +48,7 @@ class CandidateOut(BaseModel):
         from_attributes = True
 
 class CandidateWithResult(CandidateOut):
+    access_code: Optional[str] = None
     role_name: Optional[str] = None
     session_status: Optional[str] = None
     total_score: Optional[float] = None

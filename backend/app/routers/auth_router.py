@@ -25,3 +25,11 @@ def candidate_login(payload: schemas.CandidateLogin, db: Session = Depends(get_d
         raise HTTPException(status_code=401, detail="Incorrect email or access code")
     token = auth.create_access_token(candidate.id, "candidate")
     return schemas.TokenResponse(access_token=token, role="candidate")
+
+
+@router.get("/me")
+def get_me(
+    db: Session = Depends(get_db),
+    candidate: models.Candidate = Depends(auth.get_current_candidate),
+):
+    return {"name": candidate.name, "email": candidate.email}

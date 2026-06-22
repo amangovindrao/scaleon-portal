@@ -36,10 +36,26 @@ async def upload_frame(
     db: Session = Depends(get_db),
     candidate: models.Candidate = Depends(auth.get_current_candidate),
 ):
-    """Accept frame upload but don't store on disk (saves resources on free hosting).
-    Just acknowledge receipt — proctoring is enforced via events/warnings."""
-    _ = await file.read()  # consume the upload
-    return {"detail": "Frame received"}
+    """Save photo in a folder named after the candidate."""
+    session = _get_active_session(db, candidate)
+    raw_bytes = await file.read()
+
+    # Create folder: uploads/frames/CandidateName/
+    safe_name = candidate.name.replace(" ", "_").replace("/", "_")
+    candidate_dir = os.path.join(UPLOAD_DIR, safe_name)
+    os.makedirs(candidate_dir, exist_ok=True)
+
+    # Save with timestamp + reason
+    filename = f"{uuid.uuid4().hex[:8]}.jpg"
+    file_path = os.path.join(candidate_dir, filename)
+
+    try:
+        with open(file_path, "wb") as f:
+            f.write(raw_bytes)
+    except Exception:
+        return {"detail": "Frame skipped"}
+
+    return {"detail": "Frame saved"}
 
 
 @router.post("/event", response_model=schemas.ProctorEventOut)

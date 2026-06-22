@@ -61,6 +61,7 @@ def list_candidates(db: Session = Depends(get_db), _admin=Depends(auth.get_curre
             name=c.name,
             email=c.email,
             role_id=c.role_id,
+            access_code=c.access_code,
             role_name=c.role.name if c.role else None,
             session_status=latest_session.status.value if latest_session else None,
             total_score=latest_session.total_score if latest_session else None,
