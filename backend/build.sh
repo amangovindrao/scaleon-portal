@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 pip install -r requirements.txt
-# Only seed if DB doesn't exist yet
-python -c "
+python3 -c "
 from app.database import engine, Base
 from app import models
+Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
-print('DB tables ready')
+print('DB recreated')
 "
-python -m app.seed
-python -m app.seed_questions
+python3 -m app.seed
+python3 -m app.seed_questions
