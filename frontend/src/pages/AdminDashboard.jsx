@@ -189,6 +189,16 @@ export default function AdminDashboard() {
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a'); a.href = url; a.download = 'scaleon_credentials.csv'; a.click();
                 }}>⬇ Download Credentials</button>
+                <button className="btn btn-outline btn-sm" onClick={async () => {
+                  const token = localStorage.getItem('token');
+                  const res = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:8000') + '/admin/photos/download', {
+                    headers: { Authorization: `Bearer ${token}` }
+                  });
+                  if (!res.ok) { alert('No photos found yet'); return; }
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a'); a.href = url; a.download = 'scaleon_photos.zip'; a.click();
+                }}>📷 Download Photos (ZIP)</button>
               </div>
             </div>
             <div className="page-body">
