@@ -29,12 +29,22 @@ export default function TestReady() {
   }
 
   async function startTest() {
-    // Check deadline
-    const DEADLINE = new Date('2026-06-22T17:20:00+05:30').getTime();
-    if (Date.now() >= DEADLINE) {
-      setError('The test window has closed (5:20 PM deadline passed). You can no longer start the test.');
-      return;
-    }
+    // Check deadline from server
+    try {
+      const { data } = await api.get('/admin/test-window');
+      const deadline = new Date(data.test_end).getTime();
+      const startTime = new Date(data.test_start).getTime();
+      const now = Date.now();
+      if (now >= deadline) {
+        setError('The test window has closed. You can no longer start the test.');
+        return;
+      }
+      if (now < startTime) {
+        setError(`Test has not started yet. It opens at ${new Date(data.test_start).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })}`);
+        return;
+      }
+    } catch {}
+
     if (!camOk) { setError('Please allow camera access first.'); return; }
     setStarting(true);
     try {

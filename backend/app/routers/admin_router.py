@@ -7,8 +7,37 @@ import io
 
 from .. import models, schemas, auth
 from ..database import get_db
+from ..settings import get_settings, save_settings
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+# ---------- Test Window Settings ----------
+
+@router.get("/settings")
+def get_test_settings(_admin=Depends(auth.get_current_admin)):
+    return get_settings()
+
+
+@router.post("/settings")
+def update_test_settings(
+    payload: dict,
+    _admin=Depends(auth.get_current_admin),
+):
+    settings = get_settings()
+    if "test_start" in payload:
+        settings["test_start"] = payload["test_start"]
+    if "test_end" in payload:
+        settings["test_end"] = payload["test_end"]
+    save_settings(settings)
+    return settings
+
+
+# Public endpoint for candidates to get test window (no auth needed)
+@router.get("/test-window")
+def get_test_window():
+    s = get_settings()
+    return {"test_start": s["test_start"], "test_end": s["test_end"]}
 
 
 # ---------- Roles ----------

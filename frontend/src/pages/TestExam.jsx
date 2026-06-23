@@ -54,36 +54,46 @@ export default function TestExam() {
   const warningLockRef = useRef(false);
   const photoTaken27 = useRef(false);
 
-  // Deadline: 5:20 PM IST June 22 2026
-  const DEADLINE = new Date('2026-06-22T17:20:00+05:30').getTime();
+  // Deadline from server
+  const [deadline, setDeadline] = useState(null);
 
   useEffect(() => {
+    api.get('/admin/test-window').then(({ data }) => {
+      setDeadline(new Date(data.test_end).getTime());
+    }).catch(() => {
+      // Default fallback
+      setDeadline(new Date('2026-06-22T17:20:00+05:30').getTime());
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!deadline) return;
     const iv = setInterval(() => {
       const now = Date.now();
-      if (now >= DEADLINE) {
+      if (now >= deadline) {
         clearInterval(iv);
         setDeadlineAlert('⏰ Time up! Submitting...');
         playAlertBeep();
         setTimeout(() => handleFinish(), 1500);
-      } else if (DEADLINE - now <= 5 * 60000 && !deadlineAlert.includes('5 min')) {
-        setDeadlineAlert('⚠️ Only 5 minutes left! Test auto-submits at 5:20 PM.');
+      } else if (deadline - now <= 5 * 60000 && !deadlineAlert.includes('5 min')) {
+        setDeadlineAlert('⚠️ Only 5 minutes left! Test auto-submits soon.');
         playAlertBeep();
-      } else if (DEADLINE - now <= 20 * 60000 && !deadlineAlert) {
-        const mins = Math.ceil((DEADLINE - now) / 60000);
-        setDeadlineAlert(`⏰ ${mins} min remaining. Test closes at 5:20 PM.`);
+      } else if (deadline - now <= 20 * 60000 && !deadlineAlert) {
+        const mins = Math.ceil((deadline - now) / 60000);
+        setDeadlineAlert(`⏰ ${mins} min remaining before test closes.`);
         playAlertBeep();
       }
     }, 10000);
     return () => clearInterval(iv);
-  }, [deadlineAlert]);
+  }, [deadline, deadlineAlert]);
 
   useEffect(() => {
-    if (Date.now() >= DEADLINE) { navigate('/test/result'); return; }
+    if (deadline && Date.now() >= deadline) { navigate('/test/result'); return; }
     enterFullscreen();
     initCam();
     loadSession();
     return () => cleanup();
-  }, []);
+  }, [deadline]);
 
   // Cooldown per question
   useEffect(() => {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
-import { Users, BookOpen, BarChart2, LogOut, Plus, Trash2, Eye, ChevronDown } from 'lucide-react';
+import { Users, BookOpen, BarChart2, LogOut, Plus, Trash2, Eye, ChevronDown, Settings } from 'lucide-react';
 
 const SECTIONS = ['aptitude', 'coding', 'case_study'];
 const SECTION_LABELS = { aptitude: 'Aptitude', coding: 'Coding MCQ', case_study: 'Case Study' };
@@ -36,8 +36,36 @@ export default function AdminDashboard() {
   const [sessionDetail, setSessionDetail] = useState(null);
   const [proctorEvents, setProctorEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
+  const [testStart, setTestStart] = useState('');
+  const [testEnd, setTestEnd] = useState('');
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { fetchAll(); fetchSettings(); }, []);
+
+  async function fetchSettings() {
+    try {
+      const { data } = await api.get('/admin/settings');
+      // Convert ISO to local datetime-local format for input
+      setTestStart(toLocalInput(data.test_start));
+      setTestEnd(toLocalInput(data.test_end));
+    } catch {}
+  }
+
+  function toLocalInput(isoStr) {
+    // Convert ISO string to 'YYYY-MM-DDTHH:mm' for datetime-local input (IST)
+    const d = new Date(isoStr);
+    const ist = new Date(d.getTime() + (5.5 * 60 * 60 * 1000 - d.getTimezoneOffset() * 60 * 1000));
+    return ist.toISOString().slice(0, 16);
+  }
+
+  async function saveSettings() {
+    // Convert local input to IST ISO string
+    const startISO = testStart + ':00+05:30';
+    const endISO = testEnd + ':00+05:30';
+    try {
+      await api.post('/admin/settings', { test_start: startISO, test_end: endISO });
+      flash('Test window updated!');
+    } catch { flash('Failed to save settings', true); }
+  }
 
   async function fetchAll() {
     const [r, c, q] = await Promise.all([
@@ -149,6 +177,7 @@ export default function AdminDashboard() {
             { id: 'candidates', label: 'Candidates', icon: Users },
             { id: 'questions', label: 'Questions', icon: BookOpen },
             { id: 'results', label: 'Results', icon: BarChart2 },
+            { id: 'settings', label: 'Settings', icon: Settings },
           ].map(({ id, label, icon: Icon }) => (
             <button key={id} className={`nav-item ${tab === id ? 'active' : ''}`} onClick={() => setTab(id)}>
               <Icon size={16} />{label}
@@ -458,6 +487,37 @@ export default function AdminDashboard() {
                       )}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── Settings Tab ── */}
+        {tab === 'settings' && (
+          <>
+            <div className="page-header">
+              <h1>Test Settings</h1>
+              <p>Manage test window timing (IST - India Standard Time)</p>
+            </div>
+            <div className="page-body">
+              <div className="card" style={{ maxWidth: 500 }}>
+                <h3 className="mb-16" style={{ fontSize: '15px', color: 'var(--gold)' }}>Test Window (IST)</h3>
+                <div className="form-stack">
+                  <div className="form-group">
+                    <label className="form-label">Test Start Time (IST)</label>
+                    <input className="input" type="datetime-local" value={testStart}
+                      onChange={e => setTestStart(e.target.value)} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Test End Time (IST)</label>
+                    <input className="input" type="datetime-local" value={testEnd}
+                      onChange={e => setTestEnd(e.target.value)} />
+                  </div>
+                  <p className="text-xs text-muted">
+                    Candidates cannot start the test before start time. All ongoing tests auto-submit at end time. Alerts shown 20 min and 5 min before end.
+                  </p>
+                  <button className="btn btn-primary" onClick={saveSettings}>Save Settings</button>
                 </div>
               </div>
             </div>
